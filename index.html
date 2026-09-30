@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lissajous-görbe szimuláció</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f5f5f5;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        #simulation-container {
+            flex: 1;
+            position: relative;
+            background-color: #e9e9e9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #floor {
+            width: 100%;
+            height: 100%;
+            background-color: #ddd;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #canvas {
+            position: absolute;
+            background-color: white;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+            border: 1px solid #aaa;
+        }
+        
+        #canvas-background, #canvas-foreground {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #paint-dot {
+            position: absolute;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        #floor-size-display {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            z-index: 5;
+        }
+        
+        #controls {
+            width: 500px;
+            padding: 15px;
+            background-color: white;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            font-size: 0.9em;
+        }
+        
+        h1 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 1.4rem;
+            text-align: center;
+        }
+        
+        h2 {
+            margin: 12px 0 8px;
+            color: #34495e;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+        
+        .control-group {
+            margin-bottom: 12px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .slider-input-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        .slider-value {
+            min-width: 40px;
+            text-align: right;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-left: 8px; /* Közelebb a csúszka végéhez */
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .color-inputs {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .color-input {
+            flex: 1;
+        }
+        
+        input[type="color"] {
+            width: 100%;
+            height: 35px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 0.9em;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+        }
+        
+        button#toggleBtn {
+            flex: 1;
+            background-color: #3498db;
+        }
+        
+        button#toggleBtn:hover {
+            background-color: #2980b9;
+        }
+        
+        button#clearBtn {
+            flex: 1;
+            background-color: #e74c3c;
+        }
+        
+        button#clearBtn:hover {
+            background-color: #c0392b;
+        }
+        
+        button#saveBtn {
+            flex: 1;
+            background-color: #2ecc71;
+        }
+        
+        button#saveBtn:hover {
+            background-color: #27ae60;
+        }
+        
+        .save-scale-buttons {
+            display: flex;
+            flex: 1;
+            gap: 2px;
+        }
+        
+        .save-scale-button {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid #2ecc71;
+            border-radius: 4px;
+            background-color: #2ecc71;
+            color: white;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.8rem;
+        }
+        
+        .save-scale-button.active {
+            background-color: #27ae60;
+            border-color: #27ae60;
+        }
+        
+        .mode-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .mode-selector label {
+            margin-bottom: 0;
+            flex: none;
+        }
+        
+        .mode-selector select {
+            flex: 1;
+        }
+        
+        select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .info {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-top: 3px;
+        }
+        
+        .canvas-size-inputs {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .canvas-size-input {
+            flex: 1;
+        }
+        
+        .canvas-size-input input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .unit {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .dual-inputs {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .dual-input {
+            flex: 1;
+        }
+        
+        .slider-input-container input[type="range"] {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="simulation-container">
+        <div id="floor">
+            <canvas id="floor-canvas"></canvas>
+            <div id="canvas">
+                <canvas id="canvas-background"></canvas>
+                <canvas id="canvas-foreground"></canvas>
+            </div>
+            <div id="paint-dot"></div>
+            <div id="floor-size-display">Padló mérete: 0 × 0 [px]</div>
+        </div>
+    </div>
+    
+    <div id="controls">
+        <h1>Lissajous-görbe szimuláció</h1>
+        
+        <div class="mode-selector">
+            <label for="mode">Működési mód</label>
+            <select id="mode">
+                <option value="bucketOnly">Csak a festékes vödör mozog</option>
+                <option value="both">Festékes vödör és a vászon is mozog</option>
+            </select>
+        </div>
+        
+        <div class="control-group canvas-size-inputs">
+            <div class="canvas-size-input">
+                <label for="canvasWidth">Vászon szélessége <span class="unit">[px]</span></label>
+                <input type="number" id="canvasWidth" min="100" max="1000" value="400">
+            </div>
+            <div class="canvas-size-input">
+                <label for="canvasHeight">Vászon magassága <span class="unit">[px]</span></label>
+                <input type="number" id="canvasHeight" min="100" max="1000" value="300">
+            </div>
+        </div>
+        
+        <div class="control-group color-inputs">
+            <div class="color-input">
+                <label for="canvasColor">Vászon színe</label>
+                <input type="color" id="canvasColor" value="#ffffff">
+            </div>
+            <div class="color-input">
+                <label for="paintColor">Festék színe</label>
+                <input type="color" id="paintColor" value="#000000">
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <div class="slider-container">
+                <label for="paintWidth">Festékcsík vastagsága <span class="unit">[px]</span></label>
+                <div class="slider-input-container">
+                    <input type="range" id="paintWidth" min="1" max="10" value="2">
+                    <span class="slider-value" id="paintWidthValue">2</span>
+                </div>
+            </div>
+        </div>
+        
+        <h2>Festékesvödör ingaparaméterei</h2>
+        <div class="control-group dual-inputs">
+            <div class="dual-input">
+                <div class="slider-container">
+                    <label for="amplitudeX">Amplitúdó X <span class="unit">[px]</span></label>
+                    <div class="slider-input-container">
+                        <input type="range" id="amplitudeX" min="10" max="200" value="100">
+                        <span class="slider-value" id="amplitudeXValue">100</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dual-input">
+                <div class="slider-container">
+                    <label for="amplitudeY">Amplitúdó Y <span class="unit">[px]</span></label>
+                    <div class="slider-input-container">
+                        <input type="range" id="amplitudeY" min="10" max="200" value="100">
+                        <span class="slider-value" id="amplitudeYValue">100</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-group dual-inputs">
+            <div class="dual-input">
+                <div class="slider-container">
+                    <label for="frequencyX">Frekvencia X <span class="unit">[Hz]</span></label>
+                    <div class="slider-input-container">
+                        <input type="range" id="frequencyX" min="0.1" max="5" step="0.01" value="1">
+                        <span class="slider-value" id="frequencyXValue">1.00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dual-input">
+                <div class="slider-container">
+                    <label for="frequencyY">Frekvencia Y <span class="unit">[Hz]</span></label>
+                    <div class="slider-input-container">
+                        <input type="range" id="frequencyY" min="0.1" max="5" step="0.01" value="1">
+                        <span class="slider-value" id="frequencyYValue">1.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-group dual-inputs">
+            <div class="dual-input">
+                <div class="slider-container">
+                    <label for="phase">Fáziskülönbség <span class="unit">[°]</span></label>
+                    <div class="slider-input-container">
+                        <input type="range" id="phase" min="0" max="360" value="90">
+                        <span class="slider-value" id="phaseValue">90</span>
+                    </div>
+                </div>
+            </div>
+            <div class="dual-input">
+                <div class="slider-container">
+                    <label for="bucketDamping">Csillapítási tényező <span class="unit">[1/s]</span></label>
+                    <div class="slider-input-container">
+                        <input type="range" id="bucketDamping" min="0" max="0.5" step="0.01" value="0.05">
+                        <span class="slider-value" id="bucketDampingValue">0.05</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="canvasMotionParams" class="hidden">
+            <h2>Vászon mozgásparaméterei</h2>
+            <div class="control-group dual-inputs">
+                <div class="dual-input">
+                    <div class="slider-container">
+                        <label for="canvasX0">Kezdeti kitérés X <span class="unit">[px]</span></label>
+                        <div class="slider-input-container">
+                            <input type="range" id="canvasX0" min="-100" max="100" value="0">
+                            <span class="slider-value" id="canvasX0Value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dual-input">
+                    <div class="slider-container">
+                        <label for="canvasY0">Kezdeti kitérés Y <span class="unit">[px]</span></label>
+                        <div class="slider-input-container">
+                            <input type="range" id="canvasY0" min="-100" max="100" value="0">
+                            <span class="slider-value" id="canvasY0Value">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-group dual-inputs">
+                <div class="dual-input">
+                    <div class="slider-container">
+                        <label for="canvasVX">Kezdeti sebesség X <span class="unit">[px/s]</span></label>
+                        <div class="slider-input-container">
+                            <input type="range" id="canvasVX" min="-200" max="200" value="50">
+                            <span class="slider-value" id="canvasVXValue">50</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dual-input">
+                    <div class="slider-container">
+                        <label for="canvasVY">Kezdeti sebesség Y <span class="unit">[px/s]</span></label>
+                        <div class="slider-input-container">
+                            <input type="range" id="canvasVY" min="-200" max="200" value="0">
+                            <span class="slider-value" id="canvasVYValue">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <div class="slider-container">
+                    <label for="canvasDamping">Csillapítás <span class="unit">[1/s]</span></label>
+                    <div class="slider-input-container">
+                        <input type="range" id="canvasDamping" min="0" max="0.5" step="0.01" value="0.02">
+                        <span class="slider-value" id="canvasDampingValue">0.02</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <div class="button-row">
+                <button id="toggleBtn">Start</button>
+                <button id="clearBtn">Törlés</button>
+            </div>
+            <div class="button-row">
+                <button id="saveBtn">Mentés</button>
+                <div class="save-scale-buttons">
+                    <div class="save-scale-button active" data-scale="1">1x</div>
+                    <div class="save-scale-button" data-scale="2">2x</div>
+                    <div class="save-scale-button" data-scale="4">4x</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Globális változók
+        let animationId = null;
+        let isRunning = false;
+        let startTime = null;
+        let lastTime = 0;
+        let pausedTime = 0;
+        let totalPausedTime = 0;
+        let saveScale = 1;
+        
+        // Canvas elemek
+        const floor = document.getElementById('floor');
+        const floorCanvas = document.getElementById('floor-canvas');
+        const floorCtx = floorCanvas.getContext('2d');
+        
+        const canvasDiv = document.getElementById('canvas');
+        const canvasBackground = document.getElementById('canvas-background');
+        const canvasForeground = document.getElementById('canvas-foreground');
+        const backgroundCtx = canvasBackground.getContext('2d');
+        const foregroundCtx = canvasForeground.getContext('2d');
+        
+        const paintDot = document.getElementById('paint-dot');
+        const floorSizeDisplay = document.getElementById('floor-size-display');
+        
+        // Paraméterek
+        const params = {
+            mode: 'bucketOnly',
+            canvasWidth: 400,
+            canvasHeight: 300,
+            canvasColor: '#ffffff',
+            paintColor: '#000000',
+            paintWidth: 2,
+            amplitudeX: 100,
+            amplitudeY: 100,
+            frequencyX: 1,
+            frequencyY: 1,
+            phase: 90,
+            bucketDamping: 0.05,
+            canvasX0: 0,
+            canvasY0: 0,
+            canvasVX: 50,
+            canvasVY: 0,
+            canvasDamping: 0.02
+        };
+        
+        // Vászon pozíciója
+        let canvasPos = { x: 0, y: 0 };
+        
+        // Előző pozíció a vonal rajzolásához
+        let lastPaintPos = null;
+        let lastFloorPaintPos = null;
+        let wasLastPointOnCanvas = false;
+        
+        // Inicializálás
+        function init() {
+            // Beállítjuk a padló méretét
+            updateFloorSize();
+            
+            // Beállítjuk a vászon kezdeti pozícióját
+            updateCanvasPosition();
+            
+            // Beállítjuk a csúszkák értékeit
+            setupInputs();
+            
+            // Eseménykezelők
+            setupEventListeners();
+            
+            // Rajzoljuk meg a kezdeti állapotot
+            draw();
+            
+            // Ablak átméretezés figyelése
+            window.addEventListener('resize', updateFloorSize);
+        }
+        
+        // Padló méretének frissítése
+        function updateFloorSize() {
+            // 50-nel osztható méret
+            const width = Math.floor(window.innerWidth - 500) - (Math.floor(window.innerWidth - 500) % 50);
+            const height = Math.floor(window.innerHeight) - (Math.floor(window.innerHeight) % 50);
+            
+            // Padló canvas méreteinek beállítása
+            floorCanvas.width = width;
+            floorCanvas.height = height;
+            floorCanvas.style.width = width + 'px';
+            floorCanvas.style.height = height + 'px';
+            
+            // Amplitúdó maximum értékek frissítése
+            updateAmplitudeMaxValues(width, height);
+            
+            // Padló méretének megjelenítése
+            floorSizeDisplay.textContent = `Padló mérete: ${width} × ${height} [px]`;
+            
+            // Újrarajzoljuk, ha a szimuláció nem fut
+            if (!isRunning) {
+                updateCanvasPosition();
+                draw();
+            }
+        }
+        
+        // Amplitúdó maximum értékek frissítése
+        function updateAmplitudeMaxValues(width, height) {
+            // Maximális amplitúdó a padló szélessége és magassága
+            const maxAmplitudeX = width;
+            const maxAmplitudeY = height;
+            
+            // Csúszka maximum értékek frissítése
+            document.getElementById('amplitudeX').max = maxAmplitudeX;
+            document.getElementById('amplitudeY').max = maxAmplitudeY;
+            
+            // Ha a jelenlegi érték nagyobb, akkor korlátozzuk
+            if (params.amplitudeX > maxAmplitudeX) {
+                params.amplitudeX = maxAmplitudeX;
+                document.getElementById('amplitudeX').value = maxAmplitudeX;
+                document.getElementById('amplitudeXValue').textContent = Math.round(maxAmplitudeX);
+            }
+            
+            if (params.amplitudeY > maxAmplitudeY) {
+                params.amplitudeY = maxAmplitudeY;
+                document.getElementById('amplitudeY').value = maxAmplitudeY;
+                document.getElementById('amplitudeYValue').textContent = Math.round(maxAmplitudeY);
+            }
+        }
+        
+        // Beviteli mezők beállítása
+        function setupInputs() {
+            // Vászon méretei
+            document.getElementById('canvasWidth').value = params.canvasWidth;
+            document.getElementById('canvasHeight').value = params.canvasHeight;
+            
+            // Színek
+            document.getElementById('canvasColor').value = params.canvasColor;
+            document.getElementById('paintColor').value = params.paintColor;
+            
+            // Festék vastagsága
+            document.getElementById('paintWidth').value = params.paintWidth;
+            document.getElementById('paintWidthValue').textContent = params.paintWidth;
+            
+            // Vödör paraméterei
+            document.getElementById('amplitudeX').value = params.amplitudeX;
+            document.getElementById('amplitudeXValue').textContent = params.amplitudeX;
+            
+            document.getElementById('amplitudeY').value = params.amplitudeY;
+            document.getElementById('amplitudeYValue').textContent = params.amplitudeY;
+            
+            document.getElementById('frequencyX').value = params.frequencyX;
+            document.getElementById('frequencyXValue').textContent = params.frequencyX.toFixed(2);
+            
+            document.getElementById('frequencyY').value = params.frequencyY;
+            document.getElementById('frequencyYValue').textContent = params.frequencyY.toFixed(2);
+            
+            document.getElementById('phase').value = params.phase;
+            document.getElementById('phaseValue').textContent = params.phase;
+            
+            document.getElementById('bucketDamping').value = params.bucketDamping;
+            document.getElementById('bucketDampingValue').textContent = params.bucketDamping.toFixed(2);
+            
+            // Vászon mozgásparaméterei
+            document.getElementById('canvasX0').value = params.canvasX0;
+            document.getElementById('canvasX0Value').textContent = params.canvasX0;
+            
+            document.getElementById('canvasY0').value = params.canvasY0;
+            document.getElementById('canvasY0Value').textContent = params.canvasY0;
+            
+            document.getElementById('canvasVX').value = params.canvasVX;
+            document.getElementById('canvasVXValue').textContent = params.canvasVX;
+            
+            document.getElementById('canvasVY').value = params.canvasVY;
+            document.getElementById('canvasVYValue').textContent = params.canvasVY;
+            
+            document.getElementById('canvasDamping').value = params.canvasDamping;
+            document.getElementById('canvasDampingValue').textContent = params.canvasDamping.toFixed(2);
+        }
+        
+        // Eseménykezelők beállítása
+        function setupEventListeners() {
+            // Mód váltás
+            document.getElementById('mode').addEventListener('change', function(e) {
+                params.mode = e.target.value;
+                const canvasParams = document.getElementById('canvasMotionParams');
+                if (params.mode === 'both') {
+                    canvasParams.classList.remove('hidden');
+                } else {
+                    canvasParams.classList.add('hidden');
+                }
+                // Módváltáskor töröljük a rajzot
+                clearSimulation();
+            });
+            
+            // Vászon mérete
+            document.getElementById('canvasWidth').addEventListener('input', function(e) {
+                params.canvasWidth = parseInt(e.target.value);
+                updateCanvasPosition();
+                // Ne töröljük a rajzot méretváltáskor
+                if (isRunning) {
+                    drawBackground();
+                }
+            });
+            
+            document.getElementById('canvasHeight').addEventListener('input', function(e) {
+                params.canvasHeight = parseInt(e.target.value);
+                updateCanvasPosition();
+                // Ne töröljük a rajzot méretváltáskor
+                if (isRunning) {
+                    drawBackground();
+                }
+            });
+            
+            // Színek
+            document.getElementById('canvasColor').addEventListener('input', function(e) {
+                params.canvasColor = e.target.value;
+                // Háttérszín változtatása - csak a háttér újrarajzolása
+                drawBackground();
+            });
+            
+            document.getElementById('paintColor').addEventListener('input', function(e) {
+                params.paintColor = e.target.value;
+                // Színváltáskor ne töröljük a rajzot
+            });
+            
+            // Festék vastagsága
+            document.getElementById('paintWidth').addEventListener('input', function(e) {
+                params.paintWidth = parseInt(e.target.value);
+                document.getElementById('paintWidthValue').textContent = params.paintWidth;
+            });
+            
+            // Vödör paraméterei
+            document.getElementById('amplitudeX').addEventListener('input', function(e) {
+                params.amplitudeX = parseInt(e.target.value);
+                document.getElementById('amplitudeXValue').textContent = params.amplitudeX;
+            });
+            
+            document.getElementById('amplitudeY').addEventListener('input', function(e) {
+                params.amplitudeY = parseInt(e.target.value);
+                document.getElementById('amplitudeYValue').textContent = params.amplitudeY;
+            });
+            
+            document.getElementById('frequencyX').addEventListener('input', function(e) {
+                params.frequencyX = parseFloat(e.target.value);
+                document.getElementById('frequencyXValue').textContent = params.frequencyX.toFixed(2);
+            });
+            
+            document.getElementById('frequencyY').addEventListener('input', function(e) {
+                params.frequencyY = parseFloat(e.target.value);
+                document.getElementById('frequencyYValue').textContent = params.frequencyY.toFixed(2);
+            });
+            
+            document.getElementById('phase').addEventListener('input', function(e) {
+                params.phase = parseInt(e.target.value);
+                document.getElementById('phaseValue').textContent = params.phase;
+            });
+            
+            document.getElementById('bucketDamping').addEventListener('input', function(e) {
+                params.bucketDamping = parseFloat(e.target.value);
+                document.getElementById('bucketDampingValue').textContent = params.bucketDamping.toFixed(2);
+            });
+            
+            // Vászon mozgásparaméterei
+            document.getElementById('canvasX0').addEventListener('input', function(e) {
+                params.canvasX0 = parseInt(e.target.value);
+                document.getElementById('canvasX0Value').textContent = params.canvasX0;
+            });
+            
+            document.getElementById('canvasY0').addEventListener('input', function(e) {
+                params.canvasY0 = parseInt(e.target.value);
+                document.getElementById('canvasY0Value').textContent = params.canvasY0;
+            });
+            
+            document.getElementById('canvasVX').addEventListener('input', function(e) {
+                params.canvasVX = parseInt(e.target.value);
+                document.getElementById('canvasVXValue').textContent = params.canvasVX;
+            });
+            
+            document.getElementById('canvasVY').addEventListener('input', function(e) {
+                params.canvasVY = parseInt(e.target.value);
+                document.getElementById('canvasVYValue').textContent = params.canvasVY;
+            });
+            
+            document.getElementById('canvasDamping').addEventListener('input', function(e) {
+                params.canvasDamping = parseFloat(e.target.value);
+                document.getElementById('canvasDampingValue').textContent = params.canvasDamping.toFixed(2);
+            });
+            
+            // Gombok
+            document.getElementById('toggleBtn').addEventListener('click', toggleSimulation);
+            document.getElementById('clearBtn').addEventListener('click', clearSimulation);
+            document.getElementById('saveBtn').addEventListener('click', saveImage);
+            
+            // Mentés méret gombok
+            document.querySelectorAll('.save-scale-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('.save-scale-button').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    saveScale = parseInt(this.getAttribute('data-scale'));
+                });
+            });
+        }
+        
+        // Vászon pozíciójának frissítése
+        function updateCanvasPosition() {
+            canvasPos.x = (floorCanvas.width - params.canvasWidth) / 2;
+            canvasPos.y = (floorCanvas.height - params.canvasHeight) / 2;
+            
+            canvasDiv.style.width = params.canvasWidth + 'px';
+            canvasDiv.style.height = params.canvasHeight + 'px';
+            canvasDiv.style.left = canvasPos.x + 'px';
+            canvasDiv.style.top = canvasPos.y + 'px';
+            canvasDiv.style.backgroundColor = params.canvasColor;
+            
+            // Canvas kontextusok méreteinek beállítása
+            canvasBackground.width = params.canvasWidth;
+            canvasBackground.height = params.canvasHeight;
+            canvasBackground.style.width = params.canvasWidth + 'px';
+            canvasBackground.style.height = params.canvasHeight + 'px';
+            
+            canvasForeground.width = params.canvasWidth;
+            canvasForeground.height = params.canvasHeight;
+            canvasForeground.style.width = params.canvasWidth + 'px';
+            canvasForeground.style.height = params.canvasHeight + 'px';
+            
+            // Vászon háttér
+            drawBackground();
+        }
+        
+        // Háttér rajzolása
+        function drawBackground() {
+            backgroundCtx.fillStyle = params.canvasColor;
+            backgroundCtx.fillRect(0, 0, params.canvasWidth, params.canvasHeight);
+        }
+        
+        // Rajzolás
+        function draw() {
+            // Padló háttér
+            floorCtx.fillStyle = '#ddd';
+            floorCtx.fillRect(0, 0, floorCanvas.width, floorCanvas.height);
+            
+            // Vászon háttér
+            drawBackground();
+        }
+        
+        // Szimuláció indítása/leállítása
+        function toggleSimulation() {
+            if (isRunning) {
+                // Leállítás
+                isRunning = false;
+                document.getElementById('toggleBtn').textContent = 'Folytatás';
+                pausedTime = performance.now();
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+            } else {
+                // Indítás/folytatás
+                isRunning = true;
+                document.getElementById('toggleBtn').textContent = 'Szünet';
+                if (pausedTime > 0) {
+                    totalPausedTime += performance.now() - pausedTime;
+                    pausedTime = 0;
+                }
+                if (!startTime) {
+                    startTime = performance.now();
+                    lastPaintPos = null;
+                    lastFloorPaintPos = null;
+                    wasLastPointOnCanvas = false;
+                }
+                animate();
+            }
+        }
+        
+        // Szimuláció törlése
+        function clearSimulation() {
+            isRunning = false;
+            document.getElementById('toggleBtn').textContent = 'Start';
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            startTime = null;
+            lastTime = 0;
+            lastPaintPos = null;
+            lastFloorPaintPos = null;
+            wasLastPointOnCanvas = false;
+            pausedTime = 0;
+            totalPausedTime = 0;
+            
+            // Töröljük a canvas-eket
+            drawBackground();
+            foregroundCtx.clearRect(0, 0, params.canvasWidth, params.canvasHeight);
+            
+            floorCtx.fillStyle = '#ddd';
+            floorCtx.fillRect(0, 0, floorCanvas.width, floorCanvas.height);
+            
+            // Visszaállítjuk a vásznat a középpontba
+            updateCanvasPosition();
+            
+            // Újrarajzoljuk
+            draw();
+        }
+        
+        // Kép mentése
+        function saveImage() {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = params.canvasWidth * saveScale;
+            tempCanvas.height = params.canvasHeight * saveScale;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Háttér rajzolása
+            tempCtx.fillStyle = params.canvasColor;
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Előtér rajzolása (a görbék)
+            tempCtx.drawImage(canvasForeground, 0, 0, params.canvasWidth * saveScale, params.canvasHeight * saveScale);
+            
+            // Letöltés
+            const link = document.createElement('a');
+            link.download = 'lissajous.png';
+            link.href = tempCanvas.toDataURL();
+            link.click();
+        }
+        
+        // Metszéspont számítása a vászon határán
+        function calculateIntersection(x1, y1, x2, y2, canvasX, canvasY, canvasWidth, canvasHeight) {
+            // A vászon határai
+            const left = canvasX;
+            const right = canvasX + canvasWidth;
+            const top = canvasY;
+            const bottom = canvasY + canvasHeight;
+            
+            // Ellenőrizzük a négy oldalt
+            const intersections = [];
+            
+            // Bal oldal
+            if (x1 !== x2) {
+                const t = (left - x1) / (x2 - x1);
+                if (t >= 0 && t <= 1) {
+                    const y = y1 + t * (y2 - y1);
+                    if (y >= top && y <= bottom) {
+                        intersections.push({ x: left, y: y, t: t });
+                    }
+                }
+            }
+            
+            // Jobb oldal
+            if (x1 !== x2) {
+                const t = (right - x1) / (x2 - x1);
+                if (t >= 0 && t <= 1) {
+                    const y = y1 + t * (y2 - y1);
+                    if (y >= top && y <= bottom) {
+                        intersections.push({ x: right, y: y, t: t });
+                    }
+                }
+            }
+            
+            // Felső oldal
+            if (y1 !== y2) {
+                const t = (top - y1) / (y2 - y1);
+                if (t >= 0 && t <= 1) {
+                    const x = x1 + t * (x2 - x1);
+                    if (x >= left && x <= right) {
+                        intersections.push({ x: x, y: top, t: t });
+                    }
+                }
+            }
+            
+            // Alsó oldal
+            if (y1 !== y2) {
+                const t = (bottom - y1) / (y2 - y1);
+                if (t >= 0 && t <= 1) {
+                    const x = x1 + t * (x2 - x1);
+                    if (x >= left && x <= right) {
+                        intersections.push({ x: x, y: bottom, t: t });
+                    }
+                }
+            }
+            
+            // Válasszuk ki a legközelebbi metszéspontot a kezdőponthoz
+            if (intersections.length > 0) {
+                return intersections.reduce((closest, current) => {
+                    return (current.t < closest.t) ? current : closest;
+                });
+            }
+            
+            return null;
+        }
+        
+        // Animáció
+        function animate(timestamp) {
+            if (!isRunning) return;
+            
+            if (!startTime) startTime = timestamp;
+            const adjustedTime = timestamp - totalPausedTime;
+            const elapsed = (adjustedTime - startTime) / 1000; // másodpercben
+            
+            // Vödör pozíciójának kiszámítása (padlóhoz rögzítve)
+            const phaseRad = params.phase * Math.PI / 180;
+            const dampingFactor = Math.exp(-params.bucketDamping * elapsed);
+            
+            // A vödör a padló közepéhez van rögzítve
+            const centerX = floorCanvas.width / 2;
+            const centerY = floorCanvas.height / 2;
+            
+            const bucketX = centerX + params.amplitudeX * dampingFactor * 
+                           Math.sin(2 * Math.PI * params.frequencyX * elapsed);
+            const bucketY = centerY + params.amplitudeY * dampingFactor * 
+                           Math.sin(2 * Math.PI * params.frequencyY * elapsed + phaseRad);
+            
+            // Vászon pozíciójának kiszámítása (ha szükséges)
+            let canvasOffsetX = 0;
+            let canvasOffsetY = 0;
+            
+            if (params.mode === 'both') {
+                // Csillapított harmonikus rezgés a vászonra
+                const damping = Math.exp(-params.canvasDamping * elapsed);
+                
+                // Egyszerűsített modell: kezdeti kitérés és sebesség alapján
+                canvasOffsetX = damping * (params.canvasX0 * Math.cos(params.canvasVX * elapsed / 100) + 
+                                           params.canvasVX * Math.sin(params.canvasVX * elapsed / 100));
+                canvasOffsetY = damping * (params.canvasY0 * Math.cos(params.canvasVY * elapsed / 100) + 
+                                           params.canvasVY * Math.sin(params.canvasVY * elapsed / 100));
+            }
+            
+            // Vászon pozíciójának frissítése
+            canvasPos.x = (floorCanvas.width - params.canvasWidth) / 2 + canvasOffsetX;
+            canvasPos.y = (floorCanvas.height - params.canvasHeight) / 2 + canvasOffsetY;
+            
+            canvasDiv.style.left = canvasPos.x + 'px';
+            canvasDiv.style.top = canvasPos.y + 'px';
+            
+            // Festékpont pozíciója a padlón (abszolút pozíció)
+            paintDot.style.left = bucketX + 'px';
+            paintDot.style.top = bucketY + 'px';
+            
+            // Festékpont pozíciója a vásznon (relatív pozíció)
+            const paintXOnCanvas = bucketX - canvasPos.x;
+            const paintYOnCanvas = bucketY - canvasPos.y;
+            
+            // Ellenőrizzük, hogy a pont a vászonon van-e
+            const isOnCanvas = 
+                paintXOnCanvas >= 0 && paintXOnCanvas <= params.canvasWidth &&
+                paintYOnCanvas >= 0 && paintYOnCanvas <= params.canvasHeight;
+            
+            // Rajzolás a vászonra (folyamatos vonal)
+            foregroundCtx.fillStyle = params.paintColor;
+            foregroundCtx.strokeStyle = params.paintColor;
+            foregroundCtx.lineWidth = params.paintWidth;
+            foregroundCtx.lineCap = 'round';
+            foregroundCtx.lineJoin = 'round';
+            
+            // Rajzolás a padlóra
+            floorCtx.fillStyle = params.paintColor;
+            floorCtx.strokeStyle = params.paintColor;
+            floorCtx.lineWidth = params.paintWidth;
+            floorCtx.lineCap = 'round';
+            floorCtx.lineJoin = 'round';
+            
+            // Időfelbontás növelése nagy frekvenciáknál
+            const maxFreq = Math.max(params.frequencyX, params.frequencyY);
+            const timeStep = Math.max(0.001, 0.02 / maxFreq);
+            
+            // Interpoláció a simább görbék érdekében
+            if (lastPaintPos && lastTime > 0) {
+                const timeDiff = elapsed - lastTime;
+                const steps = Math.max(1, Math.ceil(timeDiff / timeStep));
+                
+                for (let i = 1; i <= steps; i++) {
+                    const t = i / steps;
+                    const interpTime = lastTime + (elapsed - lastTime) * t;
+                    
+                    // Interpolált pozíció számítása
+                    const interpDampingFactor = Math.exp(-params.bucketDamping * interpTime);
+                    const interpBucketX = centerX + params.amplitudeX * interpDampingFactor * 
+                                         Math.sin(2 * Math.PI * params.frequencyX * interpTime);
+                    const interpBucketY = centerY + params.amplitudeY * interpDampingFactor * 
+                                         Math.sin(2 * Math.PI * params.frequencyY * interpTime + phaseRad);
+                    
+                    // Vászon interpolált pozíciója
+                    let interpCanvasOffsetX = 0;
+                    let interpCanvasOffsetY = 0;
+                    
+                    if (params.mode === 'both') {
+                        const interpDamping = Math.exp(-params.canvasDamping * interpTime);
+                        
+                        interpCanvasOffsetX = interpDamping * (params.canvasX0 * Math.cos(params.canvasVX * interpTime / 100) + 
+                                                               params.canvasVX * Math.sin(params.canvasVX * interpTime / 100));
+                        interpCanvasOffsetY = interpDamping * (params.canvasY0 * Math.cos(params.canvasVY * interpTime / 100) + 
+                                                               params.canvasVY * Math.sin(params.canvasVY * interpTime / 100));
+                    }
+                    
+                    const interpCanvasPosX = (floorCanvas.width - params.canvasWidth) / 2 + interpCanvasOffsetX;
+                    const interpCanvasPosY = (floorCanvas.height - params.canvasHeight) / 2 + interpCanvasOffsetY;
+                    
+                    const interpPaintXOnCanvas = interpBucketX - interpCanvasPosX;
+                    const interpPaintYOnCanvas = interpBucketY - interpCanvasPosY;
+                    
+                    const interpIsOnCanvas = 
+                        interpPaintXOnCanvas >= 0 && interpPaintXOnCanvas <= params.canvasWidth &&
+                        interpPaintYOnCanvas >= 0 && interpPaintYOnCanvas <= params.canvasHeight;
+                    
+                    // Az előző interpolált pont meghatározása
+                    const prevInterpTime = lastTime + (elapsed - lastTime) * ((i-1) / steps);
+                    const prevInterpDampingFactor = Math.exp(-params.bucketDamping * prevInterpTime);
+                    const prevInterpBucketX = centerX + params.amplitudeX * prevInterpDampingFactor * 
+                                             Math.sin(2 * Math.PI * params.frequencyX * prevInterpTime);
+                    const prevInterpBucketY = centerY + params.amplitudeY * prevInterpDampingFactor * 
+                                             Math.sin(2 * Math.PI * params.frequencyY * prevInterpTime + phaseRad);
+                    
+                    let prevInterpCanvasOffsetX = 0;
+                    let prevInterpCanvasOffsetY = 0;
+                    
+                    if (params.mode === 'both') {
+                        const prevInterpDamping = Math.exp(-params.canvasDamping * prevInterpTime);
+                        
+                        prevInterpCanvasOffsetX = prevInterpDamping * (params.canvasX0 * Math.cos(params.canvasVX * prevInterpTime / 100) + 
+                                                                       params.canvasVX * Math.sin(params.canvasVX * prevInterpTime / 100));
+                        prevInterpCanvasOffsetY = prevInterpDamping * (params.canvasY0 * Math.cos(params.canvasVY * prevInterpTime / 100) + 
+                                                                       params.canvasVY * Math.sin(params.canvasVY * prevInterpTime / 100));
+                    }
+                    
+                    const prevInterpCanvasPosX = (floorCanvas.width - params.canvasWidth) / 2 + prevInterpCanvasOffsetX;
+                    const prevInterpCanvasPosY = (floorCanvas.height - params.canvasHeight) / 2 + prevInterpCanvasOffsetY;
+                    
+                    const prevInterpPaintXOnCanvas = prevInterpBucketX - prevInterpCanvasPosX;
+                    const prevInterpPaintYOnCanvas = prevInterpBucketY - prevInterpCanvasPosY;
+                    
+                    const prevInterpIsOnCanvas = 
+                        prevInterpPaintXOnCanvas >= 0 && prevInterpPaintXOnCanvas <= params.canvasWidth &&
+                        prevInterpPaintYOnCanvas >= 0 && prevInterpPaintYOnCanvas <= params.canvasHeight;
+                    
+                    // Ha az előző és az aktuális pont ugyanazon a felületen van, rajzoljunk vonalat
+                    if (prevInterpIsOnCanvas === interpIsOnCanvas) {
+                        if (prevInterpIsOnCanvas) {
+                            // Mindkét pont a vászonon van
+                            if (i === 1) {
+                                foregroundCtx.beginPath();
+                                foregroundCtx.moveTo(prevInterpPaintXOnCanvas, prevInterpPaintYOnCanvas);
+                            }
+                            foregroundCtx.lineTo(interpPaintXOnCanvas, interpPaintYOnCanvas);
+                        } else {
+                            // Mindkét pont a padlón van
+                            if (i === 1) {
+                                floorCtx.beginPath();
+                                floorCtx.moveTo(prevInterpBucketX, prevInterpBucketY);
+                            }
+                            floorCtx.lineTo(interpBucketX, interpBucketY);
+                        }
+                    } else {
+                        // A pontok különböző felületen vannak - számítsuk ki a metszéspontot
+                        const intersection = calculateIntersection(
+                            prevInterpBucketX, prevInterpBucketY,
+                            interpBucketX, interpBucketY,
+                            prevInterpCanvasPosX, prevInterpCanvasPosY,
+                            params.canvasWidth, params.canvasHeight
+                        );
+                        
+                        if (intersection) {
+                            // Metszéspont relatív koordinátái a vászonhoz
+                            const intersectionXOnCanvas = intersection.x - prevInterpCanvasPosX;
+                            const intersectionYOnCanvas = intersection.y - prevInterpCanvasPosY;
+                            
+                            if (prevInterpIsOnCanvas) {
+                                // Vászonról padlóra
+                                // Rajzoljuk a vászonra a metszéspontig
+                                if (i === 1) {
+                                    foregroundCtx.beginPath();
+                                    foregroundCtx.moveTo(prevInterpPaintXOnCanvas, prevInterpPaintYOnCanvas);
+                                }
+                                foregroundCtx.lineTo(intersectionXOnCanvas, intersectionYOnCanvas);
+                                foregroundCtx.stroke();
+                                
+                                // Rajzoljuk a padlóra a metszésponttól
+                                floorCtx.beginPath();
+                                floorCtx.moveTo(intersection.x, intersection.y);
+                                floorCtx.lineTo(interpBucketX, interpBucketY);
+                                floorCtx.stroke();
+                            } else {
+                                // Padlóról vászona
+                                // Rajzoljuk a padlóra a metszéspontig
+                                if (i === 1) {
+                                    floorCtx.beginPath();
+                                    floorCtx.moveTo(prevInterpBucketX, prevInterpBucketY);
+                                }
+                                floorCtx.lineTo(intersection.x, intersection.y);
+                                floorCtx.stroke();
+                                
+                                // Rajzoljuk a vászonra a metszésponttól
+                                foregroundCtx.beginPath();
+                                foregroundCtx.moveTo(intersectionXOnCanvas, intersectionYOnCanvas);
+                                foregroundCtx.lineTo(interpPaintXOnCanvas, interpPaintYOnCanvas);
+                                foregroundCtx.stroke();
+                            }
+                        }
+                    }
+                    
+                    // Az utolsó lépésben vonjunk le következtetést és rajzoljunk
+                    if (i === steps) {
+                        if (prevInterpIsOnCanvas === interpIsOnCanvas) {
+                            if (prevInterpIsOnCanvas) {
+                                foregroundCtx.stroke();
+                            } else {
+                                floorCtx.stroke();
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Előző pozíciók frissítése
+            lastPaintPos = { 
+                x: paintXOnCanvas, 
+                y: paintYOnCanvas
+            };
+            
+            lastFloorPaintPos = {
+                x: bucketX,
+                y: bucketY
+            };
+            
+            wasLastPointOnCanvas = isOnCanvas;
+            lastTime = elapsed;
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        // Oldal betöltésekor inicializálás
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
